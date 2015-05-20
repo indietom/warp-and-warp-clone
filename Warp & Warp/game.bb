@@ -60,6 +60,9 @@ Type player
 	
 	Field currentFrame
 	
+	Field invisibleCount
+	Field maxInvisibleCount
+	
 	Field animationCount
 End Type 
 
@@ -218,7 +221,7 @@ Function addEnemy(x2, y2, typeOf2)
 	enemy\hp = 2
 	
 	enemy\typeOf = typeOf2
-	enemy\maxStepCount = 16
+	enemy\maxStepCount = 32
 		
 	enemy\maxTurnCount = 32
 	
@@ -228,6 +231,9 @@ Function addEnemy(x2, y2, typeOf2)
 	enemy\imy = frame(enemy\typeOf+5)
 	
 	enemy\worth = (enemy\typeOf * 1000) + 500
+	
+	If enemy\typeOf = 1 Then enemy\maxStepCount = 64
+	If enemy\typeOf = 1 Then enemy\hp = 5
 End Function 
 
 Function updateEnemy()
@@ -268,7 +274,7 @@ Function updateEnemy()
 
 			enemy\currentFrame = enemy\currentFrame + 1
 			
-			enemy\stepCount = 0
+			enemy\stepCount = Rand(0, enemy\maxStepCount-4)
 		End If 
 		
 		For player.player = Each player
@@ -290,7 +296,7 @@ Function updateEnemy()
 			End If
 		Next
 		
-		If enemy\fireRate >= 1 Then
+		If enemy\fireRate >= 1 And enemy\typeOf = 0 Then
 			enemy\fireRate = enemy\fireRate + 1
 			If enemy\fireRate = 8 Then
 				addProjectile(enemy\x+5, enemy\y+5, enemy\shootDirection, True) 
@@ -391,7 +397,8 @@ Function addPlayer()
 	
 	player\lives = 3
 	
-	player\maxStepCount = 12
+	player\maxStepCount = 8
+	player\maxInvisibleCount = 128+64
 	
 	player\imx = 1
 	player\imy = 1
@@ -420,6 +427,13 @@ Function updatePlayer()
 		If KeyDown(208) Then
 			player\stepCount = player\stepCount + 1
 			player\direction = 3
+		End If 
+		
+		If KeyDown(208) Then
+			If KeyDown(203) Or KeyDown(205) Then player\stepCount = player\stepCount - 1
+		End If 
+		If KeyDown(200) Then
+			If KeyDown(203) Or KeyDown(205) Then player\stepCount = player\stepCount - 1
 		End If 
 		
 		If KeyDown(205) = 0 And KeyDown(203) = 0 And KeyDown(200) = 0 And KeyDown(208) = 0 Then 
@@ -464,7 +478,7 @@ Function updatePlayer()
 			End If
 		Next
 		
-		If player\dead Then
+		If player\dead And player\invisibleCount <= 0 Then
 			player\animationCount = player\animationCount + 1
 			player\imx = frame(player\currentFrame)
 			player\imy = 69
@@ -479,6 +493,7 @@ Function updatePlayer()
 				player\lives = player\lives - 1
 				player\currentFrame = 0
 				player\imy = 1
+				player\invisibleCount = 1
 			End If
 		End If
 		
@@ -486,6 +501,14 @@ Function updatePlayer()
 			player\fireRate = player\fireRate + 1
 			If player\fireRate >= 32 Then player\fireRate = 0
 		End If 
+		
+		If player\invisibleCount >= 1 Then
+			player\dead = 0
+			player\invisibleCount = player\invisibleCount + 1
+			If player\invisibleCount >= player\maxInvisibleCount Then
+				player\invisibleCount = 0
+			End If
+		End If
 		
 		If player\stepCount >= player\maxStepCount And player\dead = 0 Then
 			If player\direction = 0 Then player\x = player\x + 16
@@ -506,12 +529,26 @@ Function playerUi()
 			Rect -10 + i * 16, 10, 8, 8
 		Next
 		Text 3, 20, "SCORE: " + player\score 
+		If player\dead Then
+			Color Rand(255), Rand(255), Rand(255)
+			Text 120, 100, "GET READY!"
+			Color 255, 255, 255
+		End If
 	Next
 End Function
 
 Function drawPlayer()
 	For player.player = Each player
 		DrawImageRect(spritesheet, player\x, player\y, player\imx, player\imy, 16, 16)
+		If player\invisibleCount >= 1 Then
+			If player\invisibleCount <= player\maxInvisibleCount/4 Then
+				Color 0, 255, 0 
+			Else 
+				Color 255, 0, 0
+			End If 
+			Oval player\x-4, player\y-4, 24, 24, 0
+			Color 255, 255, 255
+		End If
 	Next
 End Function
 
@@ -536,7 +573,10 @@ Function draw()
 End Function 
 
 addPlayer()
-addEnemy(16*5, 16*5, 0)
+
+For i = 0 To 5
+	addEnemy(16*Rand(15), 16*Rand(10), Rand(0, 1))
+Next
 
 For i = 0 To 10
 	addTile(16*Rand(20), 16*Rand(15))
