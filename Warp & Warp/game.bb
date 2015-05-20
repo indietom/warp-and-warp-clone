@@ -56,7 +56,11 @@ Type player
 	
 	Field fireRate
 	
+	Field respawnCount
+	
 	Field currentFrame
+	
+	Field animationCount
 End Type 
 
 Type projectile
@@ -95,10 +99,15 @@ Type enemy
 	Field fireRate
 	Field maxFireRate
 	
+	Field shootDirection
+	
 	Field imx
 	Field imy
 	
-	Field currentFrame 
+	Field currentFrame
+	
+	Field worth 
+	Field deathByPlayer
 	
 	Field destroyCount
 	
@@ -209,7 +218,7 @@ Function addEnemy(x2, y2, typeOf2)
 	enemy\hp = 2
 	
 	enemy\typeOf = typeOf2
-	enemy\maxStepCount = 32
+	enemy\maxStepCount = 16
 		
 	enemy\maxTurnCount = 32
 	
@@ -217,12 +226,40 @@ Function addEnemy(x2, y2, typeOf2)
 	
 	enemy\imx = 1
 	enemy\imy = frame(enemy\typeOf+5)
+	
+	enemy\worth = (enemy\typeOf * 1000) + 500
 End Function 
 
 Function updateEnemy()
 	For enemy.enemy = Each enemy 
 		enemy\imx = frame(enemy\currentFrame)
-	
+		
+		enemy\turnCount = enemy\turnCount + 1
+		If enemy\turnCount >= enemy\maxTurnCount Then 
+			enemy\direction = Rand(3)
+			enemy\turnCount = 0
+		End If
+		
+		If enemy\x <= 0 Then enemy\direction = 0
+		If enemy\x >= 320-16 Then enemy\direction = 1
+		If enemy\y <= 0 Then enemy\direction = 3
+		If enemy\y >= 240-16 Then enemy\direction = 2
+		
+		For tile.tile = Each tile
+			If enemy\x + 16 = tile\x And enemy\y = tile\y And enemy\direction = 0 Then
+				enemy\direction = 1
+			End If 
+			If enemy\x - 16 = tile\x And enemy\y = tile\y And enemy\direction = 1 Then
+				enemy\direction = 0
+			End If
+			If enemy\x = tile\x And enemy\y - 16 = tile\y And enemy\direction = 2 Then
+				enemy\direction = 3
+			End If 
+			If enemy\x = tile\x And enemy\y + 16 = tile\y And enemy\direction = 3 Then
+				enemy\direction = 2
+			End If 
+		Next 
+		
 		If enemy\stepCount >= enemy\maxStepCount Then
 			If enemy\direction = 0 Then enemy\x = enemy\x + 16
 			If enemy\direction = 1 Then enemy\x = enemy\x - 16
@@ -234,14 +271,44 @@ Function updateEnemy()
 			enemy\stepCount = 0
 		End If 
 		
+		For player.player = Each player
+			If collision(player\x, player\y, 16, 16, enemy\x, enemy\y, 640, 16) And enemy\fireRate <= 0 Then
+				enemy\shootDirection = 0
+				enemy\fireRate = 1
+			End If
+			If collision(player\x, player\y, 16, 16, enemy\x-640+16, enemy\y, 640, 16) And enemy\fireRate <= 0 Then
+				enemy\shootDirection = 1
+				enemy\fireRate = 1
+			End If
+			If collision(player\x, player\y, 16, 16, enemy\x, enemy\y, 16, 640) And enemy\fireRate <= 0 Then
+				enemy\shootDirection = 3
+				enemy\fireRate = 1
+			End If
+			If collision(player\x, player\y, 16, 16, enemy\x, enemy\y-640+15, 16, 640) And enemy\fireRate <= 0 Then
+				enemy\shootDirection = 2
+				enemy\fireRate = 1
+			End If
+		Next
+		
+		If enemy\fireRate >= 1 Then
+			enemy\fireRate = enemy\fireRate + 1
+			If enemy\fireRate = 8 Then
+				addProjectile(enemy\x+5, enemy\y+5, enemy\shootDirection, True) 
+			End If 
+			If enemy\fireRate >= 32 Then
+				enemy\fireRate = 0
+			End If 
+		End If 
+		
 		If enemy\currentFrame >= 2 And enemy\hp >= 1 Then enemy\currentFrame = 0
 		
 		enemy\stepCount = enemy\stepCount + 1
 		
 		If enemy\hp >= 1 Then 
 			For projectile.projectile = Each projectile
-				If collision(projectile\x, projectile\y, 6, 6, enemy\x, enemy\y, 32, 32) Then
+				If collision(projectile\x, projectile\y, 6, 6, enemy\x, enemy\y, 16, 16) And projectile\enemy = 0 Then
 					enemy\hp = enemy\hp - 1
+					If enemy\hp <= 0 Then enemy\deathByPlayer = 1
 					projectile\destroy = 1
 				End If
 			Next
@@ -250,6 +317,9 @@ Function updateEnemy()
 		If enemy\hp <= 0 Then enemy\destroyCount = enemy\destroyCount + 1
 		
 		If enemy\destroyCount >= 1 Then
+			For player.player = Each player 
+				If enemy\deathByPlayer And enemy\destroyCount = 2Then player\score = player\score + enemy\worth
+			Next 
 			enemy\stepCount = 0
 			enemy\imx = 69
 			enemy\imy = 18
@@ -371,14 +441,46 @@ Function updatePlayer()
 			End If
 		Next
 		
-		If KeyHit(57) And player\fireRate <= 0 Then 
+		If KeyHit(57) And player\fireRate <= 0 And player\dead = 0 Then 
 			addProjectile(player\x+8-3, player\y+8-3, player\direction, False)
 			player\fireRate = 1
 		End If 
 		
-		If KeyHit(29) And player\fireRate <= 0 Then 
+		If KeyHit(29) And player\fireRate <= 0 And player\dead = 0 Then 
 			addBomb(player\x, player\y)
 		End If 
+		
+		For projectile.projectile = Each projectile
+			If collision(player\x, player\y, 16, 16, projectile\x, projectile\y, 6, 6) And projectile\enemy Then
+				player\dead = 1
+				projectile\destroy = 1
+			End If
+		Next
+		
+		For enemy.enemy = Each enemy
+			If collision(player\x, player\y, 16, 16, enemy\x, enemy\y, 16, 16) And enemy\hp > 0 Then
+				player\dead = 1
+				enemy\hp = 0
+			End If
+		Next
+		
+		If player\dead Then
+			player\animationCount = player\animationCount + 1
+			player\imx = frame(player\currentFrame)
+			player\imy = 69
+			If player\animationCount >= 8  And player\currentFrame <= 1 Then 
+				player\currentFrame = player\currentFrame + 1
+				player\animationCount = 0
+			End If 
+			player\respawnCount = player\respawnCount + 1
+			If player\respawnCount >= 64 Then
+				player\respawnCount = 0
+				player\dead = 0
+				player\lives = player\lives - 1
+				player\currentFrame = 0
+				player\imy = 1
+			End If
+		End If
 		
 		If player\fireRate >= 1 Then 
 			player\fireRate = player\fireRate + 1
@@ -397,6 +499,15 @@ Function updatePlayer()
 		End If 
 	Next
 End Function 
+
+Function playerUi()
+	For player.player = Each player
+		For i = 1 To player\lives 
+			Rect -10 + i * 16, 10, 8, 8
+		Next
+		Text 3, 20, "SCORE: " + player\score 
+	Next
+End Function
 
 Function drawPlayer()
 	For player.player = Each player
@@ -420,6 +531,8 @@ Function draw()
 	drawPlayer()
 	drawEnemy()
 	drawExplosion()
+	
+	playerUi()
 End Function 
 
 addPlayer()
