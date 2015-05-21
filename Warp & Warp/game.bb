@@ -14,10 +14,6 @@ Function collision(x, y, w, h, x2, y2, w2, h2)
  Return True 
 End Function 
 
-Function lerp#(x#, y#, t#)
-	Return t# * y# + (1-t#) * x#
-End Function
-
 Function distanceTo(x, y, x1, y2) 
 
 	Local distnace
@@ -92,6 +88,8 @@ Type enemy
 	Field typeOf
 	
 	Field hp
+	
+	Field followPlayer
 	
 	Field stepCount
 	Field maxStepCount
@@ -181,7 +179,11 @@ Function updateBomb()
 	For bomb.bomb = Each bomb
 		bomb\lifeTime = bomb\lifeTime + 1
 		If bomb\lifeTime >= 96 Then
-			
+			For i = -2 To 2 
+				For j = -2 To 2
+					addExpolsion(bomb\x + i*16, bomb\y+j*16, True)
+				Next 
+			Next
 			bomb\destroy = 1
 		End If
 		
@@ -234,6 +236,8 @@ Function addEnemy(x2, y2, typeOf2)
 	
 	If enemy\typeOf = 1 Then enemy\maxStepCount = 64
 	If enemy\typeOf = 1 Then enemy\hp = 5
+	
+	If enemy\typeOf = 0 Then enemy\followPlayer = 1
 End Function 
 
 Function updateEnemy()
@@ -241,15 +245,39 @@ Function updateEnemy()
 		enemy\imx = frame(enemy\currentFrame)
 		
 		enemy\turnCount = enemy\turnCount + 1
-		If enemy\turnCount >= enemy\maxTurnCount Then 
+		If enemy\turnCount >= enemy\maxTurnCount And enemy\followPlayer = 0 Then 
 			enemy\direction = Rand(3)
 			enemy\turnCount = 0
 		End If
 		
-		If enemy\x <= 0 Then enemy\direction = 0
-		If enemy\x >= 320-16 Then enemy\direction = 1
-		If enemy\y <= 0 Then enemy\direction = 3
-		If enemy\y >= 240-16 Then enemy\direction = 2
+		If enemy\followPlayer = 1 Then
+			enemy\maxStepCount = 64
+			For player.player = Each player
+				If player\dead = 0 Then 
+					If player\x > enemy\x Then 
+						enemy\direction = 0
+					Else 
+						enemy\direction = 1
+					End If
+				
+					If player\y <> enemy\y Then 
+						If player\y > enemy\y Then 
+							enemy\direction = 3
+						Else 
+							enemy\direction = 2
+						End If 
+					End If 
+				Else
+					enemy\direction = -1	
+				End If 
+			Next
+		End If 
+		
+		
+		If enemy\x <= 0 And enemy\followPlayer = 0 Then enemy\direction = 0
+		If enemy\x >= 320-16 And enemy\followPlayer = 0 Then enemy\direction = 1
+		If enemy\y <= 0 And enemy\followPlayer = 0 Then enemy\direction = 3
+		If enemy\y >= 240-16 And enemy\followPlayer = 0 Then enemy\direction = 2
 		
 		For tile.tile = Each tile
 			If enemy\x + 16 = tile\x And enemy\y = tile\y And enemy\direction = 0 Then
@@ -301,7 +329,7 @@ Function updateEnemy()
 			If enemy\fireRate = 8 Then
 				addProjectile(enemy\x+5, enemy\y+5, enemy\shootDirection, True) 
 			End If 
-			If enemy\fireRate >= 32 Then
+			If enemy\fireRate >= 128 Then
 				enemy\fireRate = 0
 			End If 
 		End If 
@@ -311,6 +339,12 @@ Function updateEnemy()
 		enemy\stepCount = enemy\stepCount + 1
 		
 		If enemy\hp >= 1 Then 
+			For explosion.explosion = Each explosion
+				If collision(explosion\x, explosion\y, 16, 16, enemy\x, enemy\y, 16, 16) And explosion\dangerous Then
+					enemy\hp = 0
+					enemy\deathByPlayer = 1
+				End If
+			Next
 			For projectile.projectile = Each projectile
 				If collision(projectile\x, projectile\y, 6, 6, enemy\x, enemy\y, 16, 16) And projectile\enemy = 0 Then
 					enemy\hp = enemy\hp - 1
@@ -564,10 +598,10 @@ End Function
 Function draw()
 	drawProjectile()
 	drawBomb()
+	drawExplosion()
 	drawTile()
 	drawPlayer()
 	drawEnemy()
-	drawExplosion()
 	
 	playerUi()
 End Function 
