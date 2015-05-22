@@ -33,6 +33,77 @@ End Function
 Global spritesheet = LoadImage("spritesheet.bmp")
 MaskImage(spritesheet, 255, 0, 255)
 
+; -------- LEVEL STUFF --------  
+Global currentLevel
+Global enemiesToKill
+Global maxEnemiesToSpawn
+
+Global typeOfLevel
+
+Const gridLevel = 0
+Const randomScatterd = 1
+Const randomPillars = 2
+
+Function startNewLevel()
+	typeOfLevel = Rand(gridLevel, randomPillars)
+	maxEnemiesToSpawn = currentLevel*2 + Rand(4, 6)
+	
+	enemiesToKill = maxEnemiesToSpawn
+	
+	Select typeOfLevel
+		Case gridLevel
+			For x = 0 To 20 
+				For y = 0 To 15
+					addTile(x*48, y*48)
+				Next
+			Next 
+		Case randomScatterd
+			Local amountOfWalls = Rand(7, 15)
+			For i = 0 To amountOfWalls
+				addTile(16*Rand(20), 16*Rand(15))
+			Next 
+		Case randomPillars
+			Local amountOfPillars = Rand(4, 8)
+			For i = 0 To amountOfPillars 
+				Local pillarX = 16*Rand(19)
+				Local pillarY = 16*Rand(14)
+				
+				addTile(pillarX, pillarY)
+				addTile(pillarX+16, pillarY)
+				addTile(pillarX+16, pillarY+16)
+				addTile(pillarX, pillarY+16)
+			Next
+	End Select
+		
+	For i = 0 To enemiesToKill - 1
+		Local enemyX = 16*Rand(20)
+		Local enemyY = 16*Rand(14)
+		
+		addEnemy(enemyX, enemyY, Rand(0,1))
+	Next
+End Function 
+
+Function updateLevel()
+	If enemiesToKill <= 0 Then
+		resetLevel()
+		startNewLevel()
+	End If 	
+End Function
+
+Function levelUi()
+	Text 100, 100, enemiesToKill
+End Function 
+
+Function resetLevel()
+	For projectile.projectile = Each projectile
+		projectile\destroy = 1
+	Next 
+	For tile.tile = Each tile
+		tile\destroy = 1
+	Next
+End Function 
+
+; -------- END OF LEVEL STUFF -------- 
 Type player
 	Field x
 	Field y
@@ -273,7 +344,6 @@ Function updateEnemy()
 			Next
 		End If 
 		
-		
 		If enemy\x <= 0 And enemy\followPlayer = 0 Then enemy\direction = 0
 		If enemy\x >= 320-16 And enemy\followPlayer = 0 Then enemy\direction = 1
 		If enemy\y <= 0 And enemy\followPlayer = 0 Then enemy\direction = 3
@@ -354,9 +424,12 @@ Function updateEnemy()
 			Next
 		End If 
 		
-		If enemy\hp <= 0 Then enemy\destroyCount = enemy\destroyCount + 1
+		If enemy\hp <= 0 Then 
+			enemy\destroyCount = enemy\destroyCount + 1
+		End If 
 		
 		If enemy\destroyCount >= 1 Then
+			If enemy\destroyCount = 2 Then enemiesToKill = enemiesToKill - 1
 			For player.player = Each player 
 				If enemy\deathByPlayer And enemy\destroyCount = 2Then player\score = player\score + enemy\worth
 			Next 
@@ -593,6 +666,7 @@ Function update()
 	updateEnemy()
 	updateBomb()
 	updateExplosion()
+	updateLevel()
 End Function
 
 Function draw()
@@ -603,18 +677,13 @@ Function draw()
 	drawPlayer()
 	drawEnemy()
 	
+	levelUi()
 	playerUi()
 End Function 
 
 addPlayer()
 
-For i = 0 To 5
-	addEnemy(16*Rand(15), 16*Rand(10), Rand(0, 1))
-Next
-
-For i = 0 To 10
-	addTile(16*Rand(20), 16*Rand(15))
-Next
+startNewLevel()
 
 While Not KeyHit(1)
 
