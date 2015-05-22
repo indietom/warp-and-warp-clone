@@ -76,7 +76,7 @@ Function startNewLevel()
 	End Select
 		
 	For i = 0 To enemiesToKill - 1
-		Local enemyX = 16*Rand(20)
+		Local enemyX = 16*Rand(19)
 		Local enemyY = 16*Rand(14)
 		
 		addEnemy(enemyX, enemyY, Rand(0,1))
@@ -91,7 +91,7 @@ Function updateLevel()
 End Function
 
 Function levelUi()
-	Text 100, 100, enemiesToKill
+;	Text 100, 100, enemiesToKill
 End Function 
 
 Function resetLevel()
@@ -122,6 +122,7 @@ Type player
 	Field dead
 	
 	Field fireRate
+	Field amountOfBombs
 	
 	Field respawnCount
 	
@@ -215,6 +216,49 @@ Type tile
 	
 	Field destroy
 End Type
+
+Type bombPickUp
+	Field x
+	Field y
+	
+	Field lifeTime
+	Field maxLifeTime
+	
+	Field destroy
+End Type 
+
+Function addBombPickUp(x2, y2)
+	bombPickUp.bombPickUp = New bombPickUp
+	bombPickUp\x = x2
+	bombPickUp\y = y2
+	
+	bombPickUp\maxLifeTime = 128*4
+End Function 
+
+Function updateBombPickUp()
+	For bombPickUp.bombPickUp = Each bombPickUp
+		
+		bombPickUp\lifeTime = bombPickUp\lifeTime + 1 
+		If bombPickUp\lifeTime >= bombPickUp\maxLifeTime Then
+			bombPickUp\destroy = 1
+		End If
+		
+		If bombPickUp\destroy Then Delete bombPickUp
+	Next 
+End Function
+
+Function drawBombPickUp()
+	For bombPickUp.bombPickUp = Each bombPickUp
+		DrawImageRect(spritesheet, bombPickUp\x, bombPickUp\y, 52, 69, 16, 16)
+		If bombPickUp\lifeTime <= bombPickUp\maxLifeTime / 4 Then
+			Color 0, 255, 0
+		Else 
+			Color 255, 0, 0
+		End If 
+		Oval bombPickUp\x-4, bombPickUp\y-4, 24, 24, 0
+		Color 255, 255, 255
+	Next 
+End Function 
 
 Function addExpolsion(x2, y2, dangerous2)
 	expolsion.explosion = New explosion
@@ -509,6 +553,8 @@ Function addPlayer()
 	
 	player\imx = 1
 	player\imy = 1
+	
+	player\amountOfBombs = 3
 End Function 
 
 Function updatePlayer()
@@ -567,8 +613,9 @@ Function updatePlayer()
 			player\fireRate = 1
 		End If 
 		
-		If KeyHit(29) And player\fireRate <= 0 And player\dead = 0 Then 
+		If KeyHit(29) And player\amountOfBombs > 0 And player\fireRate <= 0 And player\dead = 0 Then 
 			addBomb(player\x, player\y)
+			player\amountOfBombs = player\amountOfBombs - 1
 		End If 
 		
 		For projectile.projectile = Each projectile
@@ -582,6 +629,13 @@ Function updatePlayer()
 			If collision(player\x, player\y, 16, 16, enemy\x, enemy\y, 16, 16) And enemy\hp > 0 Then
 				player\dead = 1
 				enemy\hp = 0
+			End If
+		Next
+		
+		For bombPickUp.bombPickUp = Each bombPickUp
+			If player\x = bombPickUp\x And player\y = bombPickUp\y Then
+				player\amountOfBombs = player\amountOfBombs + 1
+				bombPickUp\destroy = 1
 			End If
 		Next
 		
@@ -636,6 +690,7 @@ Function playerUi()
 			Rect -10 + i * 16, 10, 8, 8
 		Next
 		Text 3, 20, "SCORE: " + player\score 
+		Text 3, 30, "BOMBS: " + player\amountOfBombs
 		If player\dead Then
 			Color Rand(255), Rand(255), Rand(255)
 			Text 120, 100, "GET READY!"
@@ -667,10 +722,12 @@ Function update()
 	updateBomb()
 	updateExplosion()
 	updateLevel()
+	updateBombPickUp()
 End Function
 
 Function draw()
 	drawProjectile()
+	drawBombPickUp()
 	drawBomb()
 	drawExplosion()
 	drawTile()
@@ -684,6 +741,8 @@ End Function
 addPlayer()
 
 startNewLevel()
+
+addBombPickUp(16*3, 16*3)
 
 While Not KeyHit(1)
 
