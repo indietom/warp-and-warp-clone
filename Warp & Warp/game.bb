@@ -37,6 +37,8 @@ MaskImage(spritesheet, 255, 0, 255)
 Global currentLevel
 Global enemiesToKill
 Global maxEnemiesToSpawn
+Global nextLevelCount
+Global maxNextLevelCount = 128+64
 
 Global typeOfLevel
 
@@ -84,14 +86,20 @@ Function startNewLevel()
 End Function 
 
 Function updateLevel()
-	If enemiesToKill <= 0 Then
+	If enemiesToKill <= 0 And nextLevelCount >= maxNextLevelCount Then
 		resetLevel()
 		startNewLevel()
-	End If 	
+		nextLevelCount = 0
+	End If 
+
+	If enemiesToKill <= 0 Then nextLevelCount = nextLevelCount + 1
+		
 End Function
 
 Function levelUi()
-;	Text 100, 100, enemiesToKill
+	If nextLevelCount >= 1 Then
+		Text 50, 100, "GET READY FOR NEXT LEVEL"
+	End If 
 End Function 
 
 Function resetLevel()
