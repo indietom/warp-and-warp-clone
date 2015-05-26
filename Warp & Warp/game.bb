@@ -46,6 +46,19 @@ Const gridLevel = 0
 Const randomScatterd = 1
 Const randomPillars = 2
 
+Global gameOver
+Global gameOverCount
+Global maxGameOverCount = 128*2
+
+Function updateGameOver()
+	If gameOver Then 
+		ameOverCount = gameOverCount + 1	
+		If gameOverCount >= maxGameOverCount Then
+				
+		End If
+	End If  
+End Function 
+
 Function startNewLevel()
 	typeOfLevel = Rand(gridLevel, randomPillars)
 	maxEnemiesToSpawn = currentLevel*2 + Rand(4, 6)
@@ -90,10 +103,12 @@ Function updateLevel()
 		resetLevel()
 		startNewLevel()
 		nextLevelCount = 0
+		For player.player = Each player
+			player\invisibleCount = 1
+		Next
 	End If 
 
 	If enemiesToKill <= 0 Then nextLevelCount = nextLevelCount + 1
-		
 End Function
 
 Function levelUi()
