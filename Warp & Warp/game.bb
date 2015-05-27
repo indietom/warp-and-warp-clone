@@ -51,10 +51,33 @@ Global gameOverCount
 Global maxGameOverCount = 128*2
 
 Function updateGameOver()
+	For player.player = Each player
+		If player\lives <= -1 Then gameOver = 1
+	Next
 	If gameOver Then 
-		ameOverCount = gameOverCount + 1	
+		gameOverCount = gameOverCount + 1
+			
 		If gameOverCount >= maxGameOverCount Then
+			For player.player = Each player
+				player\x = 160
+				player\y = 16*5
+	
+				player\lives = 3
+				player\dead = 0
+	
+				player\maxStepCount = 8	
+				player\maxInvisibleCount = 128+64
+	
+				player\imx = 1
+				player\imy = 1
+	
+				player\amountOfBombs = 3
 				
+				player\score = 0
+			Next
+			resetLevel()
+			startnewLevel()
+			gameOver = 0
 		End If
 	End If  
 End Function 
@@ -123,6 +146,9 @@ Function resetLevel()
 	Next 
 	For tile.tile = Each tile
 		tile\destroy = 1
+	Next
+	For enemy.enemy = Each enemy
+		enemy\destroy = 1
 	Next
 End Function 
 
@@ -569,7 +595,7 @@ Function addPlayer()
 	player\x = 160
 	player\y = 16*5
 	
-	player\lives = 3
+	player\lives = 1
 	
 	player\maxStepCount = 8
 	player\maxInvisibleCount = 128+64
@@ -714,7 +740,7 @@ Function playerUi()
 		Next
 		Text 3, 20, "SCORE: " + player\score 
 		Text 3, 30, "BOMBS: " + player\amountOfBombs
-		If player\dead Then
+		If player\dead  And player\lives - 1 > -1Then
 			Color Rand(255), Rand(255), Rand(255)
 			Text 120, 100, "GET READY!"
 			Color 255, 255, 255
@@ -731,21 +757,28 @@ Function drawPlayer()
 			Else 
 				Color 255, 0, 0
 			End If 
-			Oval player\x-4, player\y-4, 24, 24, 0
+			If gameOver = 0 Then Oval player\x-4, player\y-4, 24, 24, 0
 			Color 255, 255, 255
+			If gameOver = 1 Then
+				player\imx = 35
+				player\imy = 69
+			End If
 		End If
 	Next
 End Function
 
 Function update()
-	updateProjectile()
-	updateTile()
-	updatePlayer()
+	If gameOver = 0 Then 
+		updatePlayer()
+		updateBomb()
+		updateExplosion()
+		updateLevel()
+		updateBombPickUp()
+	End If 
 	updateEnemy()
-	updateBomb()
-	updateExplosion()
-	updateLevel()
-	updateBombPickUp()
+	updateGameOver()
+	updateTile()
+	updateProjectile()
 End Function
 
 Function draw()
@@ -757,8 +790,16 @@ Function draw()
 	drawPlayer()
 	drawEnemy()
 	
-	levelUi()
-	playerUi()
+	If gameOver = 0 Then 
+		levelUi()
+		playerUi()
+	End If
+	
+	If gameOver = 1 Then
+		Color 255, 0, 0
+		Text 120, 100, "GAME OVER"
+		Color 255, 255, 255
+	End If
 End Function 
 
 addPlayer()
