@@ -33,6 +33,17 @@ End Function
 Global spritesheet = LoadImage("spritesheet.bmp")
 MaskImage(spritesheet, 255, 0, 255)
 
+Global highScore
+
+Function getHighScore()
+	Local newHighscore
+	
+	For player.player = Each player
+		If player\score > highScore Then newHighScore = player\score
+	Next
+	Return newHighscore
+End Function 
+
 ; -------- LEVEL STUFF --------  
 Global currentLevel
 Global enemiesToKill
@@ -614,6 +625,8 @@ Function updatePlayer()
 			If player\currentFrame >= 2 Then player\currentFrame = 0
 		End If 
 		
+		If player\score > highscore Then highscore = player\score
+		
 		If KeyDown(203) Then
 			player\stepCount = player\stepCount + 1
 			player\direction = 1
@@ -746,6 +759,9 @@ Function playerUi()
 			Color 255, 255, 255
 		End If
 	Next
+	Color 255, 216, 0
+	Text 3, 40, "HI-SCORE: " + highscore
+	Color 255, 255, 255
 End Function
 
 Function drawPlayer()
