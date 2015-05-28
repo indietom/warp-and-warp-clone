@@ -34,6 +34,7 @@ Global spritesheet = LoadImage("spritesheet.bmp")
 MaskImage(spritesheet, 255, 0, 255)
 
 Global highScore
+Global startScreen = 1
 
 Function getHighScore()
 	Local newHighscore
@@ -77,7 +78,6 @@ Function updateGameOver()
 				player\dead = 0
 	
 				player\maxStepCount = 8	
-				player\maxInvisibleCount = 128+64
 	
 				player\imx = 1
 				player\imy = 1
@@ -563,10 +563,11 @@ Function addProjectile(x2, y2, direction2, enemy2)
 	
 	projectile\imx = 52
 	
-	projectile\maxStepCount = 8
+	If projectile\enemy = 1 Then projectile\maxStepCount = 8
+	If projectile\enemy = 0 Then projectile\maxStepCount = 6
 	
 	For player.player = Each player 
-		projectile\stepCount = player\stepCount
+		If projectile\enemy = 0 Then projectile\stepCount = player\stepCount
 	Next
 End Function 
 
@@ -606,11 +607,11 @@ Function addPlayer()
 	player\x = 160
 	player\y = 16*5
 	
-	player\lives = 1
+	player\lives = 3
 	
 	player\maxStepCount = 8
-	player\maxInvisibleCount = 128+64
-	
+	player\invisibleCount = 1
+	player\maxInvisibleCount = 128+128	
 	player\imx = 1
 	player\imy = 1
 	
@@ -669,6 +670,19 @@ Function updatePlayer()
 				player\stepCount = 0
 			End If
 		Next
+		
+		If player\x + 16 > 320-16 And player\direction = 0 Then
+			player\stepCount = 0
+		End If
+		If player\x - 16 < 0 And player\direction = 1 Then
+			player\stepCount = 0
+		End If
+		If player\y - 16  < 0 And player\direction = 2 Then
+			player\stepCount = 0
+		End If
+		If player\y + 16  > 240-16 And player\direction = 3 Then
+			player\stepCount = 0
+		End If 
 		
 		If KeyHit(57) And player\fireRate <= 0 And player\dead = 0 Then 
 			addProjectile(player\x+8-3, player\y+8-3, player\direction, False)
@@ -784,52 +798,63 @@ Function drawPlayer()
 End Function
 
 Function update()
-	If gameOver = 0 Then 
-		updatePlayer()
-		updateBomb()
-		updateExplosion()
-		updateLevel()
-		updateBombPickUp()
+	If startScreen = 0 Then 
+		If gameOver = 0 Then 
+			updatePlayer()
+			updateBomb()
+			updateExplosion()
+			updateLevel()
+			updateBombPickUp()
+		End If 
+		updateEnemy()
+		updateGameOver()
+		updateTile()
+		updateProjectile()
+	Else 
+		If KeyHit(57) Then startScreen = 0
 	End If 
-	updateEnemy()
-	updateGameOver()
-	updateTile()
-	updateProjectile()
 End Function
 
 Function draw()
-	drawProjectile()
-	drawBombPickUp()
-	drawBomb()
-	drawExplosion()
-	drawTile()
-	drawPlayer()
-	drawEnemy()
-	
-	If gameOver = 0 Then 
-		levelUi()
-		playerUi()
-	End If
-	
-	If gameOver = 1 Then
-		Color 255, 0, 0
-		Text 120, 100, "GAME OVER"
+	If startScreen = 0 Then 
+		drawProjectile()
+		drawBombPickUp()
+		drawBomb()
+		drawExplosion()
+		drawTile()
+		drawPlayer()
+		drawEnemy()
+		
+		If gameOver = 0 Then 
+			levelUi()
+			playerUi()
+		End If
+		
+		If gameOver = 1 Then
+			Color 255, 0, 0
+			Text 120, 100, "GAME OVER"
+			Color 255, 255, 255
+		End If
+	Else 
+		Color 255, 100, 100
+		Text 160, 100, "WARP & WARP", 1
+		Color 100, 255, 100
+		Text 160, 150, "PRESS SPACE TO START", 1 
 		Color 255, 255, 255
-	End If
+	End If 
 End Function 
 
-addPlayer()
+Function startGame()
+	addPlayer()
+	startNewLevel()
+End Function 
 
-startNewLevel()
-
-addBombPickUp(16*3, 16*3)
+startGame()
 
 While Not KeyHit(1)
-
 	Cls 
 		WaitTimer(frametimer)
 		draw()
 		update()
 	Flip
-
 Wend
