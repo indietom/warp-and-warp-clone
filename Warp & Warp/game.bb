@@ -15,11 +15,9 @@ Function collision(x, y, w, h, x2, y2, w2, h2)
 End Function 
 
 Function distanceTo(x, y, x1, y2) 
-
 	Local distnace
 	distance = Sqr((x+x2)^2-(y+y2)^2)
 	Return distance 
-
 End Function
 
 Function Frame(cell)
@@ -238,6 +236,7 @@ Type enemy
 	Field imy
 	
 	Field currentFrame
+	Field hitCount
 	
 	Field worth 
 	Field deathByPlayer
@@ -417,7 +416,16 @@ End Function
 
 Function updateEnemy()
 	For enemy.enemy = Each enemy 
-		enemy\imx = frame(enemy\currentFrame)
+		If enemy\hitCount <= 0 enemy\imx = frame(enemy\currentFrame)
+		
+		If enemy\hitCount >= 1 Then
+			enemy\hitCount = enemy\hitCount + 1
+			enemy\imx = frame(2)
+			If enemy\hitCount >= 8 Then
+				enemy\imx = frame(0)
+				enemy\hitCount = 0
+			End If
+		End If
 		
 		enemy\turnCount = enemy\turnCount + 1
 		If enemy\turnCount >= enemy\maxTurnCount And enemy\followPlayer = 0 Then 
@@ -508,7 +516,7 @@ Function updateEnemy()
 			End If 
 		End If 
 		
-		If enemy\currentFrame >= 2 And enemy\hp >= 1 Then enemy\currentFrame = 0
+		If enemy\currentFrame >= 2 And enemy\hp >= 1 And enemy\hitCount <= 0 Then enemy\currentFrame = 0
 		
 		enemy\stepCount = enemy\stepCount + 1
 		
@@ -522,6 +530,7 @@ Function updateEnemy()
 			For projectile.projectile = Each projectile
 				If collision(projectile\x, projectile\y, 6, 6, enemy\x, enemy\y, 16, 16) And projectile\enemy = 0 Then
 					enemy\hp = enemy\hp - 1
+					enemy\hitCount = 1
 					If enemy\hp <= 0 Then enemy\deathByPlayer = 1
 					projectile\destroy = 1
 				End If
